@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kehoe's Garage - Workshop Board (alpha)</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font:18px system-ui,sans-serif;background:#f1f5ff;color:#1b1b3a;padding-bottom:90px}
+header{background:linear-gradient(90deg,#6c5ce7,#0984e3);color:#fff;padding:14px 16px}
+h1{margin:0;font-size:20px}h2{margin:18px 0 4px}
+.tag{background:#ffeaa7;color:#5a4300;padding:8px 16px;font-size:14px;margin:0}
+main{padding:12px;max-width:700px;margin:auto}
+.card{background:#fff;border-radius:16px;padding:14px;margin:10px 0;border-left:12px solid var(--c);box-shadow:0 2px 6px #0002}
+.card.red{background:#ffe3e3;border-color:#d63031}
+.big{display:block;width:100%;min-height:64px;margin-top:10px;font-size:20px;font-weight:700;border:0;border-radius:14px;color:#fff;background:var(--c)}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;box-shadow:0 -2px 8px #0003}
+nav button{flex:1;min-height:72px;font-size:18px;font-weight:700;border:0;background:#fff;color:#555}
+nav button.on{background:#6c5ce7;color:#fff}
+input{width:100%;padding:14px;font-size:18px;margin:6px 0;border:2px solid #b2bec3;border-radius:10px}
+.small{font-size:14px;color:#555}
+</style></head><body>
+<header><h1>🔧 Kehoe's Garage - Workshop Board</h1></header>
+<p class="tag">ALPHA. All cars and customers below are SAMPLE DATA. Changes save in this browser only.</p>
+<main id="m"></main>
+<nav><button id="bw" onclick="go('w')">🛠 Workshop</button><button id="bc" onclick="go('c')">🔍 Customer</button><button id="bo" onclick="go('o')">🗂 Office</button></nav>
+<script>
+const S=["Booked in","Being checked","Waiting for parts","Being fixed","Ready to collect","Collected"];
+const CL=["#6c5ce7","#0984e3","#e17055","#00a383","#f0a500","#636e72"];
+const N=["We have your car booked in. We will start soon.","We are checking your car now.","We are waiting for a part to arrive. We will ring you if there is news.","Your car is being fixed now.","Your car is ready. Please collect it during opening hours.","Your car has been collected. Thank you."];
+const K="kehoe-alpha-v1";
+const seed=()=>[[1001,"12-WX-4521","Ford Focus",0,0],[1002,"15-D-8810","Toyota Yaris",1,0],[1003,"09-WX-3307","VW Golf",2,3],[1004,"17-KK-912","Nissan Qashqai",2,1],[1005,"14-WX-7765","Opel Corsa",3,0],[1006,"19-WD-2043","Skoda Octavia",4,0],[1007,"11-C-5521","Honda Civic",4,0],[1008,"16-WX-1198","Hyundai i30",1,0],[1009,"13-LD-640","Kia Ceed",2,5],[1010,"20-WX-3382","Renault Clio",3,0]].map(a=>({j:a[0],reg:a[1],mk:a[2],s:a[3],t:Date.now()-a[4]*864e5}));
+let cars;try{cars=JSON.parse(localStorage.getItem(K))}catch(e){}
+if(!cars)cars=seed();
+let v="w";
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(cars))}catch(e){}};
+const red=c=>c.s==2&&Date.now()-c.t>2*864e5;
+const dd=c=>Math.floor((Date.now()-c.t)/864e5);
+const norm=s=>s.toUpperCase().replace(/[^A-Z0-9]/g,"");
+function adv(j){const c=cars.find(x=>x.j==j);if(c&&c.s<5){c.s++;c.t=Date.now();save();render()}}
+function ff(){cars.forEach(c=>{if(c.s==2)c.t-=864e5});save();render()}
+function reset(){cars=seed();save();render()}
+function go(x){v=x;render()}
+function card(c){return `<div class="card ${red(c)?'red':''}" style="--c:${CL[c.s]}"><b>${c.reg}</b> · ${c.mk}<br>Job ${c.j} · <b>${S[c.s]}</b>${red(c)?` ⚠ ${dd(c)} days`:''}<button class="big" style="--c:${CL[c.s+1]}" onclick="adv(${c.j})">Next: ${S[c.s+1]}</button></div>`}
+function look(){const c=cars.find(x=>x.j==document.getElementById("j").value.trim()&&norm(x.reg)==norm(document.getElementById("r").value));
+document.getElementById("res").innerHTML=c?`<div class="card" style="--c:${CL[c.s]}"><b>${c.reg}</b><br>Stage: <b>${S[c.s]}</b><p>${N[c.s]}</p></div>`:`<p>No match. Please check the job number and registration.</p>`}
+function render(){
+["w","c","o"].forEach(x=>document.getElementById("b"+x).className=v==x?"on":"");
+let h="";
+if(v=="w")h=`<h2>Cars in today</h2><p class="small">One tap moves a car to the next stage.</p>`+cars.filter(c=>c.s<5).map(card).join("");
+if(v=="c")h=`<h2>Check your car</h2><input id="j" placeholder="Job number" inputmode="numeric"><input id="r" placeholder="Car registration"><button class="big" style="--c:#6c5ce7" onclick="look()">Check status</button><div id="res"></div><p class="small">Sample to try: job 1001, reg 12-WX-4521. Only your own car is shown.</p>`;
+if(v=="o"){const rd=cars.filter(c=>c.s==4).length;
+h=`<div class="card" style="--c:#f0a500"><b style="font-size:28px">${rd}</b> car(s) ready but not yet collected</div>`+[0,1,2,3,4].map(i=>{const l=cars.filter(c=>c.s==i);
+return `<h2 style="color:${CL[i]}">${S[i]} (${l.length})</h2>`+(l.map(c=>`<div class="card ${red(c)?'red':''}" style="--c:${CL[i]}">${c.reg} · ${c.mk} · Job ${c.j}${red(c)?`<br>⚠ Waiting for parts ${dd(c)} days - call the customer`:''}</div>`).join("")||"<p class='small'>None</p>")}).join("")+
+`<h2>Demo tools</h2><button class="big" style="--c:#0984e3" onclick="ff()">Fast-forward 1 day (parts cars)</button><button class="big" style="--c:#636e72" onclick="reset()">Reset sample data</button>`}
+document.getElementById("m").innerHTML=h}
+render();
+</script></body></html>
